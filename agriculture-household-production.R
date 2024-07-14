@@ -1,68 +1,39 @@
-# Load setup file
-source("functions/setup.R")
+# Load setup files
+source("setup.R")
+source("households.R")
+source("agriculture_details.R")
 
-#### *************************** Agriculture households processing *********************** ####
+#### ****************************** Livestock processing ******************************* ####
 
-pActivity_agriculture_hh <- pActivity %>%
-  filter(agric == 1) %>%
-  select(countryCode, year, strataCode, hhwt) %>%
-  mutate(INDICATOR = 'HHAGRI')
+household <- households(hhld)
+agriculture <- agriculture_hhld(hhld)
+agriculture_vege <- agriculture_vege(hhld)
+agriculture_tuber <- agriculture_tuber(hhld)
+agriculture_frut <- agriculture_frut(hhld)
 
-pActivity_agriculture_vege <- pActivity %>%
-  filter(agric_vege == 1) %>%
-  select(countryCode, year, strataCode, hhwt) %>%
-  mutate(INDICATOR = 'ARGVEG')
+# combine the dataframes to have one dataframe
 
-pActivity_agriculture_tube <- pActivity %>%
-  filter(agric_tuber == 1) %>%
-  select(countryCode, year, strataCode, hhwt) %>%
-  mutate(INDICATOR = 'ARGTUB')
-
-pActivity_agriculture_fruit <- pActivity %>%
-  filter(agric_fruit == 1) %>%
-  select(countryCode, year, strataCode, hhwt) %>%
-  mutate(INDICATOR = 'ARGFRT')
-
-
-pActivity_agriculture_combine <- rbind(
-  pActivity_agriculture_hh,
-  pActivity_agriculture_vege,
-  pActivity_agriculture_tube,
-  pActivity_agriculture_fruit
+agriculture_combine <- rbind(
+  household,
+  agriculture,
+  agriculture_vege,
+  agriculture_tuber,
+  agriculture_frut
 )
 
-pActivity_agriculture_combine <- pActivity_agriculture_combine %>%
-  group_by(countryCode, year, strataCode, INDICATOR) %>%
-  summarise(totHouseholds = round(sum(hhwt), 0))
 
-pActivity_agriculture_combine <- as.data.table(pActivity_agriculture_combine)
+agriculture_combine_final <- agriculture_combine %>%
+  rename(GEO_PICT=strataCode, TIME_PERIOD = year, INDICATOR = INDICATOR, OBS_VALUE = hhtotal) %>%
+  mutate(FREQ = "A", UNIT_MULT = "", OBS_STATUS = "", DATA_SOURCE = "Household Income and Expenditure Surveys", OBS_COMMENT = "", CONF_STATUS = "")
 
-pActivity_agriculture_combine_cube <- cube(pActivity_agriculture_combine, j = round(sum(totHouseholds), 0), by = c("countryCode", "year", "strataCode", "INDICATOR"), id = FALSE )
+#Re-organising the fields following the proper order
 
-pActivity_agriculture_combine_cube <- pActivity_agriculture_combine_cube %>%
-  filter(!is.na(countryCode))
-
-pActivity_agriculture_combine_cube <- pActivity_agriculture_combine_cube %>%
-  filter(!is.na(year)) %>%
-  rename(totHouseholds = V1)
-
-pActivity_agriculture_combine_cube <- pActivity_agriculture_combine_cube %>%
-  mutate_all(~replace(., is.na(.), "_T")) %>%
-  filter(strataCode != "N")
-
-pActivity_agriculture_combine_cube_DT <- pActivity_agriculture_combine_cube %>%
-  rename(GEO_PICT=countryCode, TIME_PERIOD = year, STRATA = strataCode, INDICATOR = INDICATOR, OBS_VALUE = totHouseholds) %>%
-  mutate(FREQ = "A", UNIT_MEASURE = "N", UNIT_MULT = "", OBS_STATUS = "", DATA_SOURCE = "", OBS_COMMENT = "", CONF_STATUS = "")
-
-#Re-organizing the fields following the proper order
-
-agriculture <- pActivity_agriculture_combine_cube_DT %>%
+agriculture_combine_final <- agriculture_combine_final %>%
   select(
     FREQ,
     TIME_PERIOD,
     GEO_PICT,
     INDICATOR,
-    STRATA,
     OBS_VALUE,
     CONF_STATUS,
     OBS_COMMENT,
@@ -72,6 +43,6 @@ agriculture <- pActivity_agriculture_combine_cube_DT %>%
     DATA_SOURCE
   )
 
-#Output agriculture table to excel csv file
+#Output livestock table to excel csv file
 
-write.csv(agriculture, "output/agriculture.csv", row.names = FALSE)
+write.csv(agriculture_combine_final, "output/agriculture_combine_final.csv", row.names = FALSE)

@@ -1,76 +1,40 @@
 # Load setup files
-source("functions/setup.R")
-
+source("setup.R")
+source("households.R")
+source("livestock_details.R")
 
 #### ****************************** Livestock processing ******************************* ####
 
-pActivity_livestock_hh <- pActivity %>%
-  filter(livestock == 1) %>%
-  select(countryCode, year, strataCode, hhwt) %>%
-  mutate(INDICATOR = 'HHLVSK')
-
-pActivity_livestock_pig <- pActivity %>%
-  filter(livestock_pig == 1) %>%
-  select(countryCode, year, strataCode, hhwt) %>%
-  mutate(INDICATOR = 'LVKPIG')
-
-pActivity_livestock_chicken <- pActivity %>%
-  filter(livestock_chicken == 1) %>%
-  select(countryCode, year, strataCode, hhwt) %>%
-  mutate(INDICATOR = 'LVKCHK')
-
-pActivity_livestock_duck <- pActivity %>%
-  filter(livestock_duck == 1) %>%
-  select(countryCode, year, strataCode, hhwt) %>%
-  mutate(INDICATOR = 'LVKDCK')
-
-pActivity_livestock_other <- pActivity %>%
-  filter(livestock_other == 1) %>%
-  select(countryCode, year, strataCode, hhwt) %>%
-  mutate(INDICATOR = 'LVKOTH')
+household <- households(hhld)
+livestock <- livestock_hhld(hhld)
+livestock_pig <- livestock_pig(hhld)
+livestock_chicken <- livestock_chicken(hhld)
+livestock_duck <- livestock_duck(hhld)
+livestock_other <- livestock_other(hhld)
 
 # combine the dataframes to have one dataframe
 
-pActivity_livestock_combine <- rbind(
-  pActivity_livestock_hh,
-  pActivity_livestock_pig,
-  pActivity_livestock_chicken,
-  pActivity_livestock_duck,
-  pActivity_livestock_other
+livestock_combine <- rbind(
+  household,
+  livestock,
+  livestock_pig,
+  livestock_chicken,
+  livestock_duck,
+  livestock_other
 )
 
-pActivity_livestock_combine <- pActivity_livestock_combine %>%
-  group_by(countryCode, year, strataCode, INDICATOR) %>%
-  summarise(totHouseholds = round(sum(hhwt), 0))
-
-pActivity_livestock_combine <- as.data.table(pActivity_livestock_combine)
-
-pActivity_livestock_combine_cube <- cube(pActivity_livestock_combine, j = round(sum(totHouseholds), 0), by = c("countryCode", "year", "strataCode", "INDICATOR"), id = FALSE )
-
-pActivity_livestock_combine_cube <- pActivity_livestock_combine_cube %>%
-  filter(!is.na(countryCode))
-
-pActivity_livestock_combine_cube <- pActivity_livestock_combine_cube %>%
-  filter(!is.na(year)) %>%
-  rename(totHouseholds = V1)
-
-pActivity_livestock_combine_cube <- pActivity_livestock_combine_cube %>%
-  mutate_all(~replace(., is.na(.), "_T")) %>%
-  filter(strataCode != "N")
-
-pActivity_livestock_combine_cube_DT <- pActivity_livestock_combine_cube %>%
-  rename(GEO_PICT=countryCode, TIME_PERIOD = year, INDICATOR = INDICATOR, STRATA = strataCode, OBS_VALUE = totHouseholds) %>%
-  mutate(FREQ = "A", UNIT_MEASURE = "N", UNIT_MULT = "", OBS_STATUS = "", DATA_SOURCE = "", OBS_COMMENT = "", CONF_STATUS = "")
+livestock_combine_final <- livestock_combine %>%
+  rename(GEO_PICT=strataCode, TIME_PERIOD = year, INDICATOR = INDICATOR, OBS_VALUE = hhtotal) %>%
+  mutate(FREQ = "A", UNIT_MULT = "", OBS_STATUS = "", DATA_SOURCE = "Household Income and Expenditure Surveys", OBS_COMMENT = "", CONF_STATUS = "")
 
 #Re-organising the fields following the proper order
 
-livestock <- pActivity_livestock_combine_cube_DT %>%
+livestock_combine_final <- livestock_combine_final %>%
   select(
     FREQ,
     TIME_PERIOD,
     GEO_PICT,
     INDICATOR,
-    STRATA,
     OBS_VALUE,
     CONF_STATUS,
     OBS_COMMENT,
@@ -82,4 +46,4 @@ livestock <- pActivity_livestock_combine_cube_DT %>%
 
 #Output livestock table to excel csv file
 
-write.csv(livestock, "output/livestock.csv", row.names = FALSE)
+write.csv(livestock_combine_final, "output/livestock_combine_final.csv", row.names = FALSE)

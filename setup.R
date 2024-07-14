@@ -16,10 +16,10 @@ repository <- file.path(dirname(rstudioapi::getSourceEditorContext()$path))
 setwd(repository)
 
 #Read in datafile
-pActivity <- read_dta("../data/SPC_REG-12_2012-2021_PRIMARY-ACTIVITIES_new.dta") %>%
+pActivity <- read_dta("data/SPC_REG-12_2012-2021_PRIMARY-ACTIVITIES_new.dta") %>%
   mutate(across(where(labelled::is.labelled), haven::as_factor))
 
-subNational <- read.csv("../data/subNational.csv")
+subNational <- read.csv("data/subNational.csv")
 
 
 #### ************************* Creating subsidiary tables to be merged with main table *********************************** ####
